@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { formatMonthLabel, monthKey } from "../lib/month";
 import { CheckCircle, Calendar, BookOpen, Code, Activity, Edit2, Trash2, X } from "lucide-react";
 import type { Task } from "../lib/contracts";
 import { announceDeletedItem, REFRESH_EVENT } from "../lib/uiEvents";
@@ -34,7 +35,7 @@ export default function Completed() {
     setEditText(task.text);
     setEditCategory(task.category || "Study");
     setEditDescription(task.description || "");
-    setEditMonth(task.target_month?.slice(0, 7) || task.created_at.slice(0, 7));
+    setEditMonth(monthKey(task.target_month) || monthKey(task.created_at) || new Date().toISOString().slice(0, 7));
   };
 
   const saveEdit = async (event: React.FormEvent) => {
@@ -98,7 +99,7 @@ export default function Completed() {
                 <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wide">
                   <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(task.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   <span className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-md">{getCategoryIcon(task.category || "")} {task.category || "General"}</span>
-                  {task.target_month && <span className="rounded-md bg-violet-50 px-2 py-1 text-violet-700">Planned {new Date(`${task.target_month.slice(0, 7)}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>}
+                  {formatMonthLabel(task.target_month) && <span className="rounded-md bg-violet-50 px-2 py-1 text-violet-700">Planned {formatMonthLabel(task.target_month)}</span>}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">

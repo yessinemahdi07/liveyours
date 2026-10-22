@@ -10,7 +10,7 @@ export interface Task {
   category: string | null;
   description: string | null;
   created_at: string;
-  target_month?: string;
+  target_month?: string | null;
 }
 
 export interface Conversation {

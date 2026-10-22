@@ -8,6 +8,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "../lib/api";
+import { monthKey } from "../lib/month";
 import { announceDeletedItem, REFRESH_EVENT } from "../lib/uiEvents";
 import type { ActivityLog, FinanceBreakdownItem, FinanceSummary, SleepLog, Task, Transaction, TripPlanResponse } from "../lib/contracts";
 
@@ -32,7 +33,7 @@ function currentMonthValue() {
 }
 
 function taskMonth(task: Task) {
-  return task.target_month?.slice(0, 7) || task.created_at.slice(0, 7) || currentMonthValue();
+  return monthKey(task.target_month) || monthKey(task.created_at) || currentMonthValue();
 }
 
 function formatMonth(month: string) {
