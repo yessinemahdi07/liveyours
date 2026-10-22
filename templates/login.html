@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login | LiveYours</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+    <div class="card glass" style="max-width: 400px; width: 100%; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 20px;">🔒</div>
+        <h2 style="margin-bottom: 10px;">Welcome Back</h2>
+        <p class="muted" style="margin-bottom: 30px;">Enter your PIN to access the Command Center.</p>
+
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <input type="password" name="pin" placeholder="Enter PIN" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; padding: 20px;" autofocus required>
+            </div>
+            {% if error %}
+                <p style="color: red; margin-bottom: 15px; font-weight: 600;">{{ error }}</p>
+            {% endif %}
+            <button type="submit" class="action-btn primary full-width">Unlock</button>
+        </form>
+    </div>
+</body>
+</html>

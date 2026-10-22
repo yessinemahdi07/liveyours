@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: liveyours
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: APP_USERNAME
+        value: liveyours
+      - key: APP_PASSWORD
+        generateValue: true
+      - key: SESSION_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: BYTEZ_API_KEY
+        sync: false
+      - key: LLM7_API_KEY
+        sync: false
+      - key: CLOUD_AI_FALLBACK
+        value: "true"
+      - key: HOME_CITY
+        value: Tunis

@@ -1,0 +1,45 @@
+﻿# Environments
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+env/
+
+# Databases (CRITICAL)
+*.db
+*.sqlite
+*.sqlite3
+
+# Credentials (CRITICAL)
+credentials.json
+token.json
+*.pem
+.env.*.local
+
+# Local tunnel binary and personal runtime data
+/cloudflared.exe
+/freellmapi/
+/cookiecutter-python-flask-clean-architecture/
+/uploads/
+/instance/
+*.log
+
+# Personal project notes and demo captures stay out of the public repository
+/ABOUT_ME_SECOND_BRAIN.md
+/Screenshots from LiveYours/
+/HANDOVER_NEXT_AGENT.md
+/NEXT_AGENT_HANDOFF.md
+/LinkedIn-LiveYours-Project.md
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
