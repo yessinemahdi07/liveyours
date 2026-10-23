@@ -196,8 +196,9 @@ LLM7_MODEL = os.environ.get("LLM7_MODEL", "gpt-4o-mini-2024-07-18")
 GOOGLE_AI_STUDIO_API_KEY = os.environ.get("GOOGLE_AI_STUDIO_API_KEY", "")
 GOOGLE_AI_STUDIO_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 GOOGLE_AI_STUDIO_MODEL = os.environ.get("GOOGLE_AI_STUDIO_MODEL", "models/gemini-3.1-flash-lite")
+LIVEYOURS_COACH_PROFILE = os.environ.get("LIVEYOURS_COACH_PROFILE", "").strip()[:4000]
 
-def request_ai(payload, timeout=30):
+def request_ai(payload, timeout=30, coach_profile_context=""):
     """Compatibility boundary between Flask routes and the provider service."""
     return request_completion(
         payload,
@@ -221,6 +222,7 @@ def request_ai(payload, timeout=30):
         google_ai_studio_key=GOOGLE_AI_STUDIO_API_KEY,
         google_ai_studio_url=GOOGLE_AI_STUDIO_URL,
         google_ai_studio_model=GOOGLE_AI_STUDIO_MODEL,
+        coach_profile_context=coach_profile_context,
         logger=app.logger,
     )
 
@@ -734,7 +736,12 @@ def chat():
                         "not automatically imported or clinically verified. ---\n"
                     )
 
-    system_prompt = "You are LiveYours, a thoughtful personal productivity and wellbeing assistant."
+    system_prompt = (
+        "You are LiveYours, a warm, candid productivity roommate and practical coach. "
+        "Help the user make progress with specific next actions and realistic focus blocks. "
+        "Be direct without shame, respect rest and health, and keep cybersecurity advice legal, "
+        "defensive, and limited to authorized labs."
+    )
     if mode == 'therapist':
         system_prompt += "\nMODE: THERAPIST. Analyze his sleep, finances, and task context. Be empathetic but push him."
     else:
@@ -761,7 +768,9 @@ def chat():
         "messages": [{"role": "system", "content": system_prompt}] + recent_history,
     }
     try:
-        reply = request_ai(payload, timeout=30)['choices'][0]['message']['content']
+        reply = request_ai(
+            payload, timeout=30, coach_profile_context=LIVEYOURS_COACH_PROFILE
+        )['choices'][0]['message']['content']
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("INSERT INTO chat_history (conversation_id, role, content) VALUES (%s, 'assistant', %s)", (conversation_id, reply))

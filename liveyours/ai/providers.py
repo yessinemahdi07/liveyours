@@ -130,6 +130,7 @@ def request_completion(
     google_ai_studio_key: str,
     google_ai_studio_url: str,
     google_ai_studio_model: str,
+    coach_profile_context: str = "",
     logger,
 ):
     """Try configured providers within one overall deadline.
@@ -169,6 +170,14 @@ def request_completion(
                 llm7_model,
             ))
 
+    if hosted and coach_profile_context.strip():
+        # Owner-specific context is only approved for OpenRouter. Prefer that
+        # route when the profile is enabled; other providers remain clean fallbacks.
+        openrouter = next((item for item in providers if item.name == "openrouter"), None)
+        if openrouter:
+            providers.remove(openrouter)
+            providers.insert(0, openrouter)
+
     if not providers:
         logger.warning("No AI provider is available: local OmniRoute is unreachable from hosted deployments and cloud fallback is disabled or unconfigured.")
 
@@ -196,6 +205,17 @@ def request_completion(
                 if key in payload:
                     request_payload[key] = payload[key]
         if provider.name == "openrouter":
+            # Keep owner-specific profile data on the explicitly selected
+            # OpenRouter route; never carry it into provider failover payloads.
+            profile = (coach_profile_context or "").strip()[:4000]
+            if profile:
+                messages = [dict(message) for message in payload.get("messages", [])]
+                profile_message = f"Private coaching profile (user-provided):\n{profile}"
+                if messages and messages[0].get("role") == "system":
+                    messages[0]["content"] = f"{messages[0].get('content', '')}\n\n{profile_message}"
+                else:
+                    messages.insert(0, {"role": "system", "content": profile_message})
+                request_payload["messages"] = messages
             # Free reasoning models can spend the entire completion budget on
             # hidden reasoning and return empty visible content. Keep prompts
             # short while reserving enough tokens for both reasoning and reply.

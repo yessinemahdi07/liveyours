@@ -500,7 +500,10 @@ class RuntimeTests(unittest.TestCase):
         with patch.dict(os.environ, {"RENDER": "true"}), patch.object(
             requests, "post", side_effect=[failed_response, successful_response]
         ) as post:
-            result = live.request_ai({"model": "quick", "messages": [{"role": "user", "content": "test"}]})
+            result = live.request_ai(
+                {"model": "quick", "messages": [{"role": "user", "content": "test"}]},
+                coach_profile_context="Synthetic private profile fixture",
+            )
 
         self.assertEqual(result["choices"][0]["message"]["content"], "OK")
         self.assertEqual(post.call_count, 2)
@@ -508,6 +511,31 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(post.call_args_list[1].args[0], live.BYTEZ_URL)
         self.assertEqual(post.call_args_list[1].kwargs["headers"]["Authorization"], "test-bytez-key")
         self.assertEqual(post.call_args_list[1].kwargs["json"]["messages"], [{"role": "user", "content": "test"}])
+        self.assertIn("Synthetic private profile fixture", str(post.call_args_list[0].kwargs["json"]["messages"]))
+        self.assertNotIn("Synthetic private profile fixture", str(post.call_args_list[1].kwargs["json"]["messages"]))
+
+    def test_private_coach_profile_prefers_openrouter_over_google(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.GOOGLE_AI_STUDIO_API_KEY = "test-google-key"
+        live.OPENROUTER_API_KEY = "test-openrouter-key"
+        response = type(
+            "Response",
+            (),
+            {"raise_for_status": lambda self: None, "json": lambda self: {"choices": [{"message": {"content": "Context-aware response"}}]}},
+        )()
+
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(
+            requests, "post", return_value=response
+        ) as post:
+            live.request_ai(
+                {"model": "quick", "messages": [{"role": "system", "content": "Base instructions"}, {"role": "user", "content": "Help me focus"}]},
+                coach_profile_context="Synthetic profile fixture",
+            )
+
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(post.call_args.args[0], live.OPENROUTER_URL)
+        self.assertIn("Synthetic profile fixture", post.call_args.kwargs["json"]["messages"][0]["content"])
+        self.assertIn("Base instructions", post.call_args.kwargs["json"]["messages"][0]["content"])
 
     def test_render_uses_llm7_after_openrouter_and_bytez_fail(self):
         live.OMNIROUTE_URL = "https://stale-temporary-tunnel.example/v1/chat/completions"
@@ -740,7 +768,9 @@ class RuntimeTests(unittest.TestCase):
         rows = [{"role": "user", "content": "old context " * 100} for _ in range(9)]
         rows.append({"role": "user", "content": "current question"})
         completion = {"choices": [{"message": {"content": "READY"}}]}
-        with patch.object(live, "get_db", side_effect=[fake_db(new_id=7), fake_db(rows=rows), fake_db()]), patch.object(
+        with patch.object(live, "LIVEYOURS_COACH_PROFILE", "Synthetic CS, cybersecurity, AI and cloud study goals"), patch.object(
+            live, "get_db", side_effect=[fake_db(new_id=7), fake_db(rows=rows), fake_db()]
+        ), patch.object(
             live, "request_ai", return_value=completion
         ) as request_ai:
             response = self.client.post(
@@ -755,6 +785,8 @@ class RuntimeTests(unittest.TestCase):
         sent_history = payload["messages"][1:]
         self.assertEqual(sent_history[-1]["content"], "A" * live.MAX_CHAT_MESSAGE_CHARS)
         self.assertLessEqual(sum(len(item["content"]) for item in sent_history[:-1]), live.MAX_CHAT_HISTORY_CHARS)
+        self.assertIn("Synthetic CS, cybersecurity, AI and cloud study goals", request_ai.call_args.kwargs["coach_profile_context"])
+        self.assertIn("authorized labs", payload["messages"][0]["content"])
 
     def test_therapist_context_includes_only_bounded_screen_time_summary(self):
         def make_db(fetchone_values=(), fetchall_values=()):
