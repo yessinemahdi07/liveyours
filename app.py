@@ -223,8 +223,8 @@ def request_ai(payload, timeout=30, coach_profile_context=""):
         google_ai_studio_key=GOOGLE_AI_STUDIO_API_KEY,
         google_ai_studio_url=GOOGLE_AI_STUDIO_URL,
         google_ai_studio_model=GOOGLE_AI_STUDIO_MODEL,
-        coach_profile_context=coach_profile_context,
         logger=app.logger,
+        coach_profile_context=coach_profile_context,
     )
 
 def ai_unavailable_message():
@@ -239,7 +239,10 @@ def ai_unavailable_message():
         if BYTEZ_ENABLED:
             hosted_keys.append(BYTEZ_API_KEY)
         if not any(map(has_provider_key, hosted_keys)):
-            return "Hosted AI needs a valid GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, or LLM7_API_KEY in Render. Your logs are still saved."
+            providers = ["GOOGLE_AI_STUDIO_API_KEY", "OPENROUTER_API_KEY", "LLM7_API_KEY"]
+            if BYTEZ_ENABLED:
+                providers.insert(2, "BYTEZ_API_KEY")
+            return f"Hosted AI needs a valid {', '.join(providers)} in Render. Your logs are still saved."
         return "AI providers are temporarily unavailable. Your logs are still saved; retry shortly."
     if FREELLMAPI_API_KEY:
         return "AI is unavailable. Check that OmniRoute and FreeLLMAPI are running and their configured providers are ready."
@@ -742,12 +745,18 @@ def chat():
 
     system_prompt = (
         "You are LiveYours, a warm, candid productivity roommate and practical coach. "
-        "Help the user make progress with specific next actions and realistic focus blocks. "
-        "Be direct without shame, respect rest and health, and keep cybersecurity advice legal, "
-        "defensive, and limited to authorized labs."
+        "Help the user make meaningful progress on the goals they choose, especially "
+        "computer-science learning, cybersecurity practice, and hands-on projects when relevant. "
+        "Be direct, energetic, and specific: identify the next concrete action, define a small "
+        "focus block, and ask for a result or check-in. Challenge avoidance and vague plans "
+        "without insulting, shaming, threatening, or pretending to monitor the user. "
+        "Respect rest, health, and the user's autonomy; do not diagnose or replace professional care. "
+        "For cybersecurity work, keep guidance legal, authorized, and lab-bounded. "
+        "Treat user records and attachments as sensitive; use only relevant context and do not "
+        "repeat personal details unnecessarily."
     )
     if mode == 'therapist':
-        system_prompt += "\nMODE: THERAPIST. Analyze his sleep, finances, and task context. Be empathetic but push him."
+        system_prompt += "\nMODE: REFLECTION. Use only the bounded study, activity, screen-time, sleep, and budget context already supplied. Describe patterns without diagnosing; offer one empathetic, practical next step."
     else:
         system_prompt += f"\nMODE: {mode.upper()}. Be a no-BS accountability partner."
     if context: system_prompt += f"\nContext:\n{context}"
@@ -773,7 +782,9 @@ def chat():
     }
     try:
         reply = request_ai(
-            payload, timeout=30, coach_profile_context=LIVEYOURS_COACH_PROFILE
+            payload,
+            timeout=30,
+            coach_profile_context=LIVEYOURS_COACH_PROFILE,
         )['choices'][0]['message']['content']
         with get_db() as conn:
             with conn.cursor() as cur:

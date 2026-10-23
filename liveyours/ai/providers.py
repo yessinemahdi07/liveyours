@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 import requests
 
+COACH_PROFILE_APPROVED_PROVIDERS = frozenset({"openrouter"})
+
 
 @dataclass(frozen=True)
 class Provider:
@@ -130,8 +132,8 @@ def request_completion(
     google_ai_studio_key: str,
     google_ai_studio_url: str,
     google_ai_studio_model: str,
-    coach_profile_context: str = "",
     logger,
+    coach_profile_context: str = "",
 ):
     """Try configured providers within one overall deadline.
 
@@ -220,6 +222,18 @@ def request_completion(
             # hidden reasoning and return empty visible content. Keep prompts
             # short while reserving enough tokens for both reasoning and reply.
             request_payload["max_tokens"] = max(1024, int(request_payload.get("max_tokens", 0) or 0))
+        if coach_profile_context and provider.name in COACH_PROFILE_APPROVED_PROVIDERS:
+            messages = [dict(message) for message in request_payload.get("messages", [])]
+            profile_note = (
+                "Private owner-provided coaching context. Use only when relevant, treat as sensitive, "
+                "and do not repeat personal facts unless needed to answer the request:\n"
+                f"{coach_profile_context}"
+            )
+            if messages and messages[0].get("role") == "system":
+                messages[0]["content"] = f"{messages[0].get('content', '')}\n{profile_note}"
+            else:
+                messages.insert(0, {"role": "system", "content": profile_note})
+            request_payload["messages"] = messages
         try:
             response = requests.post(
                 provider.url,

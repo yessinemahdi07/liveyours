@@ -17,7 +17,7 @@ Set these environment values in the Render service:
 | --- | --- |
 | `DATABASE_URL` | Supabase PostgreSQL connection string; use the transaction pooler URL if required by the project |
 | `GOOGLE_AI_STUDIO_API_KEY` | Optional Google AI Studio key for Gemini hosted fallback |
-| `GOOGLE_AI_STUDIO_MODEL` | Optional Gemini model; defaults to `models/gemini-3.1-flash-lite` (verified against the connected account's model catalog and synthetic completion) |
+| `GOOGLE_AI_STUDIO_MODEL` | Optional Gemini model; defaults to `models/gemini-3.1-flash-lite` |
 | `OPENROUTER_API_KEY` | OpenRouter key for AI when the local PC is unavailable |
 | `LIVEYOURS_COACH_PROFILE` | Optional private coaching profile (max 4,000 chars); sent only with OpenRouter requests, never to Bytez/LLM7 fallback |
 | `BYTEZ_API_KEY` | Optional Bytez fallback key for AI when the local PC is unavailable |
@@ -35,7 +35,6 @@ Set these environment values in the Render service:
 Keep `CLOUD_AI_FALLBACK=false` in local `.env` unless direct cloud processing is intentionally wanted there. Set `OMNIROUTE_API_KEY` to an active OmniRoute API key locally; the app does not expose OmniRoute credentials. To use FreeLLMAPI, start its local server, copy its unified API key from the dashboard, and set `FREELLMAPI_API_KEY` in LiveYours' local `.env`. API keys, session secrets, passwords, and database URLs belong only in environment variables, never in Git. Keep `LIVEYOURS_COACH_PROFILE` private and free of credentials or sensitive records. It is included only on OpenRouter requests; fallback providers receive chat context without this additional profile. Configure it only when you consent to OpenRouter processing those profile details.
 
 AI calls use one overall time budget and move to the next configured provider quickly. The hosted fallback order is Google AI Studio, OpenRouter, Bytez (only when `BYTEZ_ENABLED=true`), then LLM7. Bytez is disabled by default because the current account has not returned a usable chat completion. When a private `LIVEYOURS_COACH_PROFILE` is configured, OpenRouter is tried first so only the explicitly selected provider receives it; other providers remain profile-free fallbacks. Unconfigured providers are skipped. The trip planner returns a fuel-calculated, budget-first outline if all AI providers are slow or unavailable.
-
 After deployment, check `https://<render-service>.onrender.com/healthz` returns `200`. The app shell serves a sign-in screen; verify unauthenticated `/api/*` requests return `401`, then sign in and test task, sleep, activity, and expense logging while the PC and OmniRoute are off. Use synthetic test entries and remove them through the app's normal recovery flow after verification.
 
 ## Move the app hostname to Render

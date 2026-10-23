@@ -794,11 +794,9 @@ class RuntimeTests(unittest.TestCase):
         rows = [{"role": "user", "content": "old context " * 100} for _ in range(9)]
         rows.append({"role": "user", "content": "current question"})
         completion = {"choices": [{"message": {"content": "READY"}}]}
-        with patch.object(live, "LIVEYOURS_COACH_PROFILE", "Synthetic CS, cybersecurity, AI and cloud study goals"), patch.object(
+        with patch.object(live, "LIVEYOURS_COACH_PROFILE", "Synthetic CS and security study goals"), patch.object(
             live, "get_db", side_effect=[fake_db(new_id=7), fake_db(rows=rows), fake_db()]
-        ), patch.object(
-            live, "request_ai", return_value=completion
-        ) as request_ai:
+        ), patch.object(live, "request_ai", return_value=completion) as request_ai:
             response = self.client.post(
                 "/api/chat",
                 auth=self.auth,
@@ -811,8 +809,11 @@ class RuntimeTests(unittest.TestCase):
         sent_history = payload["messages"][1:]
         self.assertEqual(sent_history[-1]["content"], "A" * live.MAX_CHAT_MESSAGE_CHARS)
         self.assertLessEqual(sum(len(item["content"]) for item in sent_history[:-1]), live.MAX_CHAT_HISTORY_CHARS)
-        self.assertIn("Synthetic CS, cybersecurity, AI and cloud study goals", request_ai.call_args.kwargs["coach_profile_context"])
-        self.assertIn("authorized labs", payload["messages"][0]["content"])
+        system_context = payload["messages"][0]["content"]
+        self.assertIn("productivity roommate", system_context)
+        self.assertIn("without insulting, shaming", system_context)
+        self.assertIn("legal, authorized, and lab-bounded", system_context)
+        self.assertEqual(request_ai.call_args.kwargs["coach_profile_context"], "Synthetic CS and security study goals")
 
     def test_therapist_context_includes_only_bounded_screen_time_summary(self):
         def make_db(fetchone_values=(), fetchall_values=()):
