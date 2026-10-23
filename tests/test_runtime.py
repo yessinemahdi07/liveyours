@@ -30,6 +30,7 @@ class RuntimeTests(unittest.TestCase):
             "CLOUD_AI_FALLBACK": live.CLOUD_AI_FALLBACK,
             "OPENROUTER_API_KEY": live.OPENROUTER_API_KEY,
             "BYTEZ_API_KEY": live.BYTEZ_API_KEY,
+            "BYTEZ_ENABLED": live.BYTEZ_ENABLED,
             "LLM7_API_KEY": live.LLM7_API_KEY,
             "GOOGLE_AI_STUDIO_API_KEY": live.GOOGLE_AI_STUDIO_API_KEY,
             "OMNIROUTE_URL": live.OMNIROUTE_URL,
@@ -40,6 +41,7 @@ class RuntimeTests(unittest.TestCase):
         live.APP_PASSWORD = "test-only-password"
         live.CLOUD_AI_FALLBACK = False
         live.GOOGLE_AI_STUDIO_API_KEY = ""
+        live.BYTEZ_ENABLED = False
         live.FREELLMAPI_API_KEY = ""
         live.FREELLMAPI_URL = "http://127.0.0.1:3001/v1/chat/completions"
         live.clear_login_failures()
@@ -403,6 +405,7 @@ class RuntimeTests(unittest.TestCase):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = "test-openrouter-key"
         live.BYTEZ_API_KEY = "test-bytez-key"
+        live.BYTEZ_ENABLED = True
         empty_response = type(
             "Response",
             (),
@@ -434,6 +437,7 @@ class RuntimeTests(unittest.TestCase):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = ""
         live.BYTEZ_API_KEY = "test-bytez-key"
+        live.BYTEZ_ENABLED = True
         response = type(
             "Response",
             (),
@@ -462,6 +466,26 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 128)
         self.assertEqual(post.call_args.kwargs["json"]["model"], live.BYTEZ_MODEL)
 
+    def test_bytez_route_is_off_by_default_even_with_a_saved_key(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.OPENROUTER_API_KEY = ""
+        live.BYTEZ_API_KEY = "test-bytez-key"
+        live.LLM7_API_KEY = "test-llm7-key"
+        response = type(
+            "Response",
+            (),
+            {"raise_for_status": lambda self: None, "json": lambda self: {"choices": [{"message": {"content": "Fallback answer"}}]}},
+        )()
+
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(
+            requests, "post", return_value=response
+        ) as post:
+            result = live.request_ai({"model": "quick", "messages": [{"role": "user", "content": "synthetic"}]})
+
+        self.assertEqual(result["choices"][0]["message"]["content"], "Fallback answer")
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(post.call_args.args[0], live.LLM7_URL)
+
     def test_render_normalizes_openai_content_parts_to_text(self):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = "test-openrouter-key"
@@ -481,6 +505,7 @@ class RuntimeTests(unittest.TestCase):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = "test-openrouter-key"
         live.BYTEZ_API_KEY = "test-bytez-key"
+        live.BYTEZ_ENABLED = True
 
         failed_response = type(
             "Response",
@@ -542,6 +567,7 @@ class RuntimeTests(unittest.TestCase):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = "test-openrouter-key"
         live.BYTEZ_API_KEY = "test-bytez-key"
+        live.BYTEZ_ENABLED = True
         live.LLM7_API_KEY = "test-llm7-key"
 
         failed_response = type(
@@ -582,7 +608,7 @@ class RuntimeTests(unittest.TestCase):
         live.LLM7_API_KEY = "test-llm7-key"
         failure = requests.Timeout("slow provider")
         with patch.dict(os.environ, {"RENDER": "true"}), patch.object(
-            requests, "post", side_effect=[failure, failure, type("Response", (), {
+            requests, "post", side_effect=[failure, type("Response", (), {
                 "raise_for_status": lambda self: None,
                 "json": lambda self: {"choices": [{"message": {"content": "OK"}}]},
             })()]
@@ -590,8 +616,8 @@ class RuntimeTests(unittest.TestCase):
             live.request_ai({"model": "quick", "messages": [{"role": "user", "content": "test"}]}, timeout=12)
 
         budgets = [sum(call.kwargs["timeout"]) for call in post.call_args_list]
-        self.assertEqual(len(budgets), 3)
-        self.assertTrue(all(budget <= 4.2 for budget in budgets), repr(budgets))
+        self.assertEqual(len(budgets), 2)
+        self.assertTrue(all(budget <= 9.6 for budget in budgets), repr(budgets))
 
     def test_upload_text_storage_is_capped(self):
         page = SimpleNamespace(extract_text=lambda: "A" * (live.MAX_STORED_DOCUMENT_CHARS + 500))

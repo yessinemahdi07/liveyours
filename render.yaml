@@ -20,6 +20,8 @@ services:
         sync: false
       - key: BYTEZ_API_KEY
         sync: false
+      - key: BYTEZ_ENABLED
+        value: "false"
       - key: LLM7_API_KEY
         sync: false
       - key: GOOGLE_AI_STUDIO_API_KEY

@@ -190,6 +190,7 @@ OPENROUTER_HEADERS = {"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-
 BYTEZ_API_KEY = os.environ.get("BYTEZ_API_KEY", "")
 BYTEZ_URL = "https://api.bytez.com/models/v2/openai/v1/chat/completions"
 BYTEZ_MODEL = os.environ.get("BYTEZ_MODEL", "Qwen/Qwen3-4B")
+BYTEZ_ENABLED = os.environ.get("BYTEZ_ENABLED", "false").lower() in ("1", "true", "yes")
 LLM7_API_KEY = os.environ.get("LLM7_API_KEY", "")
 LLM7_URL = "https://api.llm7.io/v1/chat/completions"
 LLM7_MODEL = os.environ.get("LLM7_MODEL", "gpt-4o-mini-2024-07-18")
@@ -213,7 +214,7 @@ def request_ai(payload, timeout=30, coach_profile_context=""):
         openrouter_url=OPENROUTER_URL,
         openrouter_headers=OPENROUTER_HEADERS,
         openrouter_model=OPENROUTER_MODEL,
-        bytez_key=BYTEZ_API_KEY,
+        bytez_key=BYTEZ_API_KEY if BYTEZ_ENABLED else "",
         bytez_url=BYTEZ_URL,
         bytez_model=BYTEZ_MODEL,
         llm7_key=LLM7_API_KEY,
@@ -234,8 +235,11 @@ def ai_unavailable_message():
                 "Hosted AI is disabled. Render cannot reach OmniRoute at your PC's 127.0.0.1; "
                 "enable CLOUD_AI_FALLBACK and configure a cloud AI key in Render."
             )
-        if not any(map(has_provider_key, (GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, BYTEZ_API_KEY, LLM7_API_KEY))):
-            return "Hosted AI needs a valid GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, BYTEZ_API_KEY, or LLM7_API_KEY in Render. Your logs are still saved."
+        hosted_keys = [GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, LLM7_API_KEY]
+        if BYTEZ_ENABLED:
+            hosted_keys.append(BYTEZ_API_KEY)
+        if not any(map(has_provider_key, hosted_keys)):
+            return "Hosted AI needs a valid GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, or LLM7_API_KEY in Render. Your logs are still saved."
         return "AI providers are temporarily unavailable. Your logs are still saved; retry shortly."
     if FREELLMAPI_API_KEY:
         return "AI is unavailable. Check that OmniRoute and FreeLLMAPI are running and their configured providers are ready."
