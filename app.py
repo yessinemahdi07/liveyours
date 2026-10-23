@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from migrations import run_migrations
 from liveyours.documents import DocumentLimits, extract_document_text as _extract_document_text, select_document_excerpt, sample_document_text
-from liveyours.ai.providers import request_completion
+from liveyours.ai.providers import has_provider_key, request_completion
 
 load_dotenv()
 app = Flask(__name__, static_folder='frontend/dist')
@@ -193,6 +193,9 @@ BYTEZ_MODEL = os.environ.get("BYTEZ_MODEL", "Qwen/Qwen3-4B")
 LLM7_API_KEY = os.environ.get("LLM7_API_KEY", "")
 LLM7_URL = "https://api.llm7.io/v1/chat/completions"
 LLM7_MODEL = os.environ.get("LLM7_MODEL", "gpt-4o-mini-2024-07-18")
+GOOGLE_AI_STUDIO_API_KEY = os.environ.get("GOOGLE_AI_STUDIO_API_KEY", "")
+GOOGLE_AI_STUDIO_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+GOOGLE_AI_STUDIO_MODEL = os.environ.get("GOOGLE_AI_STUDIO_MODEL", "models/gemini-3.1-flash-lite")
 
 def request_ai(payload, timeout=30):
     """Compatibility boundary between Flask routes and the provider service."""
@@ -215,6 +218,9 @@ def request_ai(payload, timeout=30):
         llm7_key=LLM7_API_KEY,
         llm7_url=LLM7_URL,
         llm7_model=LLM7_MODEL,
+        google_ai_studio_key=GOOGLE_AI_STUDIO_API_KEY,
+        google_ai_studio_url=GOOGLE_AI_STUDIO_URL,
+        google_ai_studio_model=GOOGLE_AI_STUDIO_MODEL,
         logger=app.logger,
     )
 
@@ -226,8 +232,8 @@ def ai_unavailable_message():
                 "Hosted AI is disabled. Render cannot reach OmniRoute at your PC's 127.0.0.1; "
                 "enable CLOUD_AI_FALLBACK and configure a cloud AI key in Render."
             )
-        if not (OPENROUTER_API_KEY or BYTEZ_API_KEY or LLM7_API_KEY):
-            return "Hosted AI needs a valid OPENROUTER_API_KEY, BYTEZ_API_KEY, or LLM7_API_KEY in Render. Your logs are still saved."
+        if not any(map(has_provider_key, (GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, BYTEZ_API_KEY, LLM7_API_KEY))):
+            return "Hosted AI needs a valid GOOGLE_AI_STUDIO_API_KEY, OPENROUTER_API_KEY, BYTEZ_API_KEY, or LLM7_API_KEY in Render. Your logs are still saved."
         return "AI providers are temporarily unavailable. Your logs are still saved; retry shortly."
     if FREELLMAPI_API_KEY:
         return "AI is unavailable. Check that OmniRoute and FreeLLMAPI are running and their configured providers are ready."
@@ -272,6 +278,10 @@ def set_cache_headers(response):
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+    elif request.path.startswith('/api/'):
+        # API responses can contain private health, finance, and study data.
+        # Keep browsers and intermediary caches from reusing them across sessions.
+        response.headers['Cache-Control'] = 'no-store'
     elif request.path == '/service-worker.js':
         # Browsers must revalidate the worker script after a deployment so it
         # can activate the new cache version and evict stale hashed assets.
@@ -491,8 +501,8 @@ def get_all_activities():
 def add_activity():
     data = request.get_json(silent=True) or {}
     activity_type = str(data.get('type', ''))
-    if activity_type not in {'Gym', 'Run', 'Study'}:
-        return jsonify({"error": "Activity type must be Gym, Run, or Study."}), 400
+    if activity_type not in {'Gym', 'Run', 'Study', 'Screen Time'}:
+        return jsonify({"error": "Activity type must be Gym, Run, Study, or Screen Time."}), 400
     try:
         distance = float(data.get('distance', 0))
         duration = int(data.get('duration_minutes', 0))
@@ -557,6 +567,7 @@ def get_analytics():
             """, (previous_start, today))
             rows = cur.fetchall()
     metric_types = ('Gym', 'Study', 'Run')
+    invested_types = ('Gym', 'Study', 'Run')
     chart_data = {
         (current_start + timedelta(days=index)).strftime('%b %d'):
             {"date": (current_start + timedelta(days=index)).strftime('%b %d'), "Gym": 0.0, "Study": 0.0, "Run": 0.0}
@@ -578,7 +589,7 @@ def get_analytics():
                 totals_by_type[activity_type] += hours
     for activity_type in totals_by_type:
         totals_by_type[activity_type] = round(totals_by_type[activity_type], 1)
-    total = round(sum(totals_by_type.values()), 1)
+    total = round(sum(totals_by_type[activity_type] for activity_type in invested_types), 1)
     previous_total = round(previous_total, 1)
     return jsonify({
         "series": list(chart_data.values()),
@@ -700,6 +711,28 @@ def chat():
 
                 context += f"\n--- Sleep: {sleep['hours'] if sleep else 'Unknown'} hrs. Spent this week: {spend} TND. ---\n"
                 if task_context: context += f"\n--- Recent Task Completions & Context ---\n{task_context}"
+                cur.execute("""
+                    SELECT created_at::date AS day, SUM(duration_minutes) AS minutes
+                    FROM activities
+                    WHERE type = 'Screen Time' AND deleted_at IS NULL
+                      AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+                    GROUP BY created_at::date
+                    ORDER BY day DESC
+                    LIMIT 7
+                """)
+                screen_time_rows = cur.fetchall()
+                if screen_time_rows:
+                    screen_time_total = sum(int(row['minutes'] or 0) for row in screen_time_rows)
+                    screen_time_days = "; ".join(
+                        f"{row['day'].isoformat()}: {int(row['minutes'] or 0)} min"
+                        for row in screen_time_rows
+                    )
+                    context += (
+                        f"\n--- Manually logged iPhone Screen Time (past 7 days): "
+                        f"{screen_time_total} minutes across {len(screen_time_rows)} logged days; "
+                        f"daily entries: {screen_time_days}. Treat this as user-entered self-report, "
+                        "not automatically imported or clinically verified. ---\n"
+                    )
 
     system_prompt = "You are LiveYours, a thoughtful personal productivity and wellbeing assistant."
     if mode == 'therapist':
@@ -808,9 +841,12 @@ def generate_flashcards():
                 "source_note": "Cards use representative sections from across the document to keep AI usage predictable." if sampled else "Cards use the full extracted document.",
             })
         return jsonify({"error": "AI failed to return a valid JSON array."}), 500
+    except RuntimeError:
+        app.logger.info("Flashcard generation has no successful configured AI provider.")
+        return jsonify({"error": ai_unavailable_message()}), 503
     except Exception:
         app.logger.exception("Flashcard generation failed")
-        return jsonify({"error": "Flashcard generation failed. Check the configured local AI model and retry."}), 500
+        return jsonify({"error": "Flashcard generation failed. Check the configured AI providers and retry."}), 500
 
 @app.route('/api/standup', methods=['GET'])
 def get_standup():
@@ -854,7 +890,7 @@ def plan_trip():
     if not destination or len(destination) > 80:
         return jsonify({"error": "Enter a Tunisian city name (up to 80 characters)."}), 400
     target_key = destination.casefold()
-    origin_name = os.environ.get("HOME_CITY", "Tunis").strip()
+    origin_name = os.environ.get("HOME_CITY", "").strip()
     origin_coords = TUNISIA_CITY_COORDS.get(origin_name.casefold())
     target_coords = TUNISIA_CITY_COORDS.get(target_key)
     if not origin_coords or not target_coords:
@@ -877,7 +913,7 @@ def plan_trip():
     prompt = (
         f"Plan a realistic low-cost day trip from {origin_name}, Tunisia to {destination.title()}. "
         f"The user's total budget is {budget:.0f} TND. Reserve {fuel_cost:.1f} TND for estimated round-trip fuel "
-        f"({round_trip_km:.1f} km, Ford Focus 2008, 9 L/100 km, fuel at {fuel_price:.2f} TND/L). "
+        f"({round_trip_km:.1f} km, estimated vehicle consumption 9 L/100 km, fuel at {fuel_price:.2f} TND/L). "
         f"Plan food and activities within the remaining {remaining:.1f} TND. Give a concise morning/afternoon plan, "
         "itemized approximate costs, and clearly call prices estimates. Do not claim live opening hours or availability."
     )

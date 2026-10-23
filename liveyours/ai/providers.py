@@ -16,6 +16,63 @@ class Provider:
     model: str
 
 
+def _bytez_message_content(result: dict) -> str:
+    """Convert Bytez chat output variants into the app's OpenAI-style contract."""
+    output = result.get("output")
+    if isinstance(output, str):
+        return output
+    if isinstance(output, dict):
+        output = [output]
+    if isinstance(output, list):
+        for item in reversed(output):
+            if isinstance(item, str) and item.strip():
+                return item
+            if not isinstance(item, dict):
+                continue
+            generated = item.get("generated_text", item.get("content"))
+            if isinstance(generated, str) and generated.strip():
+                return generated
+            if isinstance(generated, list):
+                for message in reversed(generated):
+                    if isinstance(message, dict) and isinstance(message.get("content"), str):
+                        if message["content"].strip():
+                            return message["content"]
+    choices = result.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        message = choices[0].get("message")
+        if isinstance(message, dict) and isinstance(message.get("content"), str):
+            return message["content"]
+    return ""
+
+
+def _normalize_bytez_response(result: dict, model: str) -> dict:
+    if result.get("error"):
+        raise ValueError("Bytez returned an error response")
+    content = _bytez_message_content(result)
+    if not content.strip():
+        raise ValueError("Bytez returned no chat content")
+    return {
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": content},
+            "finish_reason": "stop",
+        }],
+        "model": model,
+    }
+
+
+def has_provider_key(value: str | None) -> bool:
+    """Treat common template values as missing so they never trigger doomed calls."""
+    key = (value or "").strip()
+    if not key:
+        return False
+    return re.fullmatch(
+        r"(?:your[_-].*|replace[_-]?me|change[_-]?me|placeholder|<[^>]+>)",
+        key,
+        flags=re.IGNORECASE,
+    ) is None
+
+
 def _safe_provider_error(response) -> str:
     """Extract a short provider error code/message without logging payloads or secrets."""
     if response is None:
@@ -70,6 +127,9 @@ def request_completion(
     llm7_key: str,
     llm7_url: str,
     llm7_model: str,
+    google_ai_studio_key: str,
+    google_ai_studio_url: str,
+    google_ai_studio_model: str,
     logger,
 ):
     """Try configured providers within one overall deadline.
@@ -81,22 +141,28 @@ def request_completion(
     providers = [] if hosted else [
         Provider("omniroute", omni_url, omni_headers, payload.get("model", "quick"))
     ]
-    if not hosted and freellmapi_key:
+    if not hosted and has_provider_key(freellmapi_key):
         providers.append(Provider(
             "freellmapi", freellmapi_url,
             {"Authorization": f"Bearer {freellmapi_key}", "Content-Type": "application/json"},
             "auto",
         ))
     if cloud_fallback:
-        if openrouter_key:
+        if has_provider_key(google_ai_studio_key):
+            providers.append(Provider(
+                "google_ai_studio", google_ai_studio_url,
+                {"Authorization": f"Bearer {google_ai_studio_key}", "Content-Type": "application/json"},
+                google_ai_studio_model,
+            ))
+        if has_provider_key(openrouter_key):
             providers.append(Provider("openrouter", openrouter_url, openrouter_headers, openrouter_model))
-        if bytez_key:
+        if has_provider_key(bytez_key):
             providers.append(Provider(
                 "bytez", bytez_url,
                 {"Authorization": bytez_key, "Content-Type": "application/json"},
                 bytez_model,
             ))
-        if llm7_key:
+        if has_provider_key(llm7_key):
             providers.append(Provider(
                 "llm7", llm7_url,
                 {"Authorization": f"Bearer {llm7_key}", "Content-Type": "application/json"},
@@ -120,6 +186,15 @@ def request_completion(
         read_timeout = max(0.1, provider_budget - connect_timeout)
         provider_started_at = time.monotonic()
         request_payload = {**payload, "model": provider.model}
+        if provider.name == "bytez":
+            request_payload = {
+                "model": provider.model,
+                "messages": payload.get("messages", []),
+                "stream": False,
+            }
+            for key in ("temperature", "max_tokens", "top_p", "stop"):
+                if key in payload:
+                    request_payload[key] = payload[key]
         if provider.name == "openrouter":
             # Free reasoning models can spend the entire completion budget on
             # hidden reasoning and return empty visible content. Keep prompts
@@ -136,6 +211,8 @@ def request_completion(
             result = response.json()
             if not isinstance(result, dict) or result.get("error"):
                 raise ValueError("AI provider returned an error response")
+            if provider.name == "bytez":
+                result = _normalize_bytez_response(result, provider.model)
             choices = result.get("choices")
             choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
             if not choice or choice.get("error") or choice.get("finish_reason") == "error":

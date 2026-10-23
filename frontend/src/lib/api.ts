@@ -26,7 +26,7 @@ const isText = (value: unknown): value is string => typeof value === "string";
 const isNullableText = (value: unknown): value is string | null => value === null || isText(value);
 const isSuccess = (value: unknown): value is SuccessResponse => isRecord(value) && value.success === true;
 const isUploadResponse = (value: unknown): value is UploadResponse => isRecord(value) && value.success === true && Array.isArray(value.files) && value.files.every(isText) && (value.notices === undefined || (Array.isArray(value.notices) && value.notices.every(isText)));
-const isTask = (value: unknown): value is Task => isRecord(value) && isNumber(value.id) && isText(value.text) && typeof value.done === "boolean" && isNullableText(value.category) && isNullableText(value.description) && isText(value.created_at) && (value.target_month === undefined || isText(value.target_month));
+const isTask = (value: unknown): value is Task => isRecord(value) && isNumber(value.id) && isText(value.text) && typeof value.done === "boolean" && isNullableText(value.category) && isNullableText(value.description) && isText(value.created_at) && (value.target_month === undefined || isNullableText(value.target_month));
 const isConversation = (value: unknown): value is Conversation => isRecord(value) && isNumber(value.id) && isNullableText(value.title) && isText(value.created_at);
 const isChatMessage = (value: unknown): value is ChatMessage => isRecord(value) && (value.role === "user" || value.role === "assistant") && isText(value.content);
 const isTransaction = (value: unknown): value is Transaction => isRecord(value) && isNumber(value.id) && isNumber(value.amount) && (value.type === "expense" || value.type === "income") && isNullableText(value.category) && isNullableText(value.description) && isText(value.created_at);
@@ -37,7 +37,11 @@ const isAnalyticsRow = (value: unknown): value is AnalyticsRow => isRecord(value
 const isAnalyticsResponse = (value: unknown): value is AnalyticsResponse => isRecord(value) && Array.isArray(value.series) && value.series.every(isAnalyticsRow) && isRecord(value.summary) && isNumber(value.summary.total_hours) && isNumber(value.summary.previous_total_hours) && isNumber(value.summary.change_hours) && (value.summary.change_percent === null || isNumber(value.summary.change_percent)) && isRecord(value.summary.hours_by_activity) && isNumber(value.summary.hours_by_activity.Gym) && isNumber(value.summary.hours_by_activity.Study) && isNumber(value.summary.hours_by_activity.Run);
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(url, {
+    ...init,
+    credentials: "same-origin",
+    cache: "no-store",
+  });
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -80,7 +84,7 @@ function isFinanceSummary(value: unknown): value is FinanceSummary {
 }
 
 export const api = {
-  getAuthSession: () => requestObject("/api/auth/session", isAuthSession),
+  getAuthSession: (signal?: AbortSignal) => requestObject("/api/auth/session", isAuthSession, { signal }),
   login: (username: string, password: string) => postJson<SuccessResponse>("/api/auth/login", { username, password }),
   logout: () => postJson<SuccessResponse>("/api/auth/logout", {}),
   getConversations: () => requestArray("/api/conversations", isConversation),

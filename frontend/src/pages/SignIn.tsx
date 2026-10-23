@@ -21,12 +21,7 @@ export default function SignIn({ busy, error, onSubmit }: SignInProps) {
     <main className="flex min-h-dvh items-center justify-center bg-[#F7F5FC] px-5 py-8 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] text-[#211D2B]">
       <section className="w-full max-w-[420px] rounded-[28px] border border-[#EAE5F2] bg-white p-6 shadow-[0_24px_80px_rgba(48,34,75,0.08)] sm:p-10">
         <header className="mb-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F1EBFF] text-[#7C3AED]" aria-hidden="true">
-            <svg width="25" height="25" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 20 L40 80 L50 50 L60 80 L80 20" stroke="currentColor" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M35 20 L50 50 L65 20" stroke="currentColor" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/favicon.svg" alt="" aria-hidden="true" className="h-11 w-11 rounded-2xl" />
           <div>
             <p className="text-[17px] font-bold tracking-[-0.03em]">LiveYours</p>
             <p className="text-xs font-medium text-[#777181]">Your personal workspace</p>

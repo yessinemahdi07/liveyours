@@ -2,6 +2,7 @@ import io
 import os
 import unittest
 import requests
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from openpyxl import Workbook
@@ -30,6 +31,7 @@ class RuntimeTests(unittest.TestCase):
             "OPENROUTER_API_KEY": live.OPENROUTER_API_KEY,
             "BYTEZ_API_KEY": live.BYTEZ_API_KEY,
             "LLM7_API_KEY": live.LLM7_API_KEY,
+            "GOOGLE_AI_STUDIO_API_KEY": live.GOOGLE_AI_STUDIO_API_KEY,
             "OMNIROUTE_URL": live.OMNIROUTE_URL,
             "FREELLMAPI_API_KEY": live.FREELLMAPI_API_KEY,
             "FREELLMAPI_URL": live.FREELLMAPI_URL,
@@ -37,6 +39,7 @@ class RuntimeTests(unittest.TestCase):
         live.APP_USERNAME = "liveyours"
         live.APP_PASSWORD = "test-only-password"
         live.CLOUD_AI_FALLBACK = False
+        live.GOOGLE_AI_STUDIO_API_KEY = ""
         live.FREELLMAPI_API_KEY = ""
         live.FREELLMAPI_URL = "http://127.0.0.1:3001/v1/chat/completions"
         live.clear_login_failures()
@@ -57,6 +60,11 @@ class RuntimeTests(unittest.TestCase):
         response = self.client.get("/api/tasks")
         self.assertEqual(response.status_code, 401)
         self.assertNotIn("WWW-Authenticate", response.headers)
+
+    def test_api_responses_are_not_cached(self):
+        response = self.client.get("/api/auth/session")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
 
     def test_login_sets_http_only_session_and_authenticates_session_endpoint(self):
         unauthenticated = self.client.get("/api/auth/session")
@@ -158,6 +166,32 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(response.status_code, 400)
         get_db.assert_not_called()
 
+    def test_screen_time_is_accepted_as_a_manual_activity_log(self):
+        database = MagicMock()
+        with patch.object(live, "get_db", return_value=database):
+            response = self.client.post(
+                "/api/activities/add", auth=self.auth, headers={"Origin": "http://localhost"},
+                json={"type": "Screen Time", "duration_minutes": 135, "description": "iPhone weekly report"},
+            )
+        self.assertEqual(response.status_code, 200)
+        cursor = database.__enter__.return_value.cursor.return_value.__enter__.return_value
+        self.assertIn("Screen Time", cursor.execute.call_args.args[1])
+
+    def test_screen_time_is_excluded_from_activity_analytics(self):
+        database = MagicMock()
+        cursor = database.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = {"today": date(2026, 10, 23)}
+        cursor.fetchall.return_value = [
+            {"day": date(2026, 10, 23), "type": "Study", "hours": 2.0},
+            {"day": date(2026, 10, 23), "type": "Screen Time", "hours": 4.0},
+        ]
+        with patch.object(live, "get_db", return_value=database):
+            response = self.client.get("/api/analytics", auth=self.auth)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["summary"]["total_hours"], 2.0)
+        self.assertNotIn("screen_time_hours", response.json["summary"])
+        self.assertNotIn("Screen Time", response.json["series"][-1])
+
     def test_sleep_rejects_quality_outside_one_to_ten(self):
         with patch.object(live, "get_db") as get_db:
             response = self.client.post(
@@ -208,7 +242,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_trip_planner_calculates_trip_and_calls_ai(self):
         completion = {"choices": [{"message": {"content": "A budget itinerary."}}]}
-        with patch.object(live, "request_ai", return_value=completion) as request_ai:
+        with patch.dict(os.environ, {"HOME_CITY": "Tunis"}), patch.object(live, "request_ai", return_value=completion) as request_ai:
             response = self.client.post(
                 "/api/plan_trip",
                 auth=self.auth,
@@ -221,7 +255,7 @@ class RuntimeTests(unittest.TestCase):
         request_ai.assert_called_once()
 
     def test_trip_planner_returns_calculated_outline_when_ai_is_slow(self):
-        with patch.object(live, "request_ai", side_effect=requests.Timeout("upstream timeout")) as request_ai:
+        with patch.dict(os.environ, {"HOME_CITY": "Tunis"}), patch.object(live, "request_ai", side_effect=requests.Timeout("upstream timeout")) as request_ai:
             response = self.client.post(
                 "/api/plan_trip",
                 auth=self.auth,
@@ -276,6 +310,36 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(post.call_args.args[0], live.OPENROUTER_URL)
         self.assertEqual(post.call_args.kwargs["json"]["model"], "openrouter/free")
         self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 1024)
+
+    def test_render_uses_google_ai_studio_as_cloud_fallback(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.GOOGLE_AI_STUDIO_API_KEY = "test-google-ai-studio-key"
+        response = type(
+            "Response",
+            (),
+            {"raise_for_status": lambda self: None, "json": lambda self: {"choices": [{"message": {"content": "Gemini reply"}}]}},
+        )()
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(requests, "post", return_value=response) as post:
+            result = live.request_ai({"model": "quick", "messages": [{"role": "user", "content": "test"}]})
+
+        self.assertEqual(result["choices"][0]["message"]["content"], "Gemini reply")
+        self.assertEqual(post.call_args.args[0], live.GOOGLE_AI_STUDIO_URL)
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer test-google-ai-studio-key")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], live.GOOGLE_AI_STUDIO_MODEL)
+
+    def test_render_skips_placeholder_provider_keys_without_wasting_a_request(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.OPENROUTER_API_KEY = "your_openrouter_key"
+        live.BYTEZ_API_KEY = "your_bytez_key"
+        live.LLM7_API_KEY = ""
+
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(requests, "post") as post:
+            with self.assertRaises(RuntimeError):
+                live.request_ai({"model": "quick", "messages": [{"role": "user", "content": "test"}]})
+
+            self.assertIn("needs a valid", live.ai_unavailable_message())
+
+        post.assert_not_called()
 
     def test_openrouter_preserves_larger_completion_budget(self):
         live.CLOUD_AI_FALLBACK = True
@@ -366,6 +430,38 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(post.call_args_list[0].args[0], live.OPENROUTER_URL)
         self.assertEqual(post.call_args_list[1].args[0], live.BYTEZ_URL)
 
+    def test_bytez_chat_uses_documented_model_endpoint_and_normalizes_output(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.OPENROUTER_API_KEY = ""
+        live.BYTEZ_API_KEY = "test-bytez-key"
+        response = type(
+            "Response",
+            (),
+            {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {
+                    "output": [{"generated_text": [{"role": "assistant", "content": "Bytez answer"}]}]
+                },
+            },
+        )()
+        payload = {
+            "model": "quick",
+            "messages": [{"role": "user", "content": "synthetic test"}],
+            "max_tokens": 128,
+        }
+
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(
+            requests, "post", return_value=response
+        ) as post:
+            result = live.request_ai(payload)
+
+        self.assertEqual(result["choices"][0]["message"]["content"], "Bytez answer")
+        self.assertEqual(post.call_args.args[0], live.BYTEZ_URL)
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "test-bytez-key")
+        self.assertEqual(post.call_args.kwargs["json"]["messages"], payload["messages"])
+        self.assertEqual(post.call_args.kwargs["json"]["max_tokens"], 128)
+        self.assertEqual(post.call_args.kwargs["json"]["model"], live.BYTEZ_MODEL)
+
     def test_render_normalizes_openai_content_parts_to_text(self):
         live.CLOUD_AI_FALLBACK = True
         live.OPENROUTER_API_KEY = "test-openrouter-key"
@@ -411,7 +507,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(post.call_args_list[0].args[0], live.OPENROUTER_URL)
         self.assertEqual(post.call_args_list[1].args[0], live.BYTEZ_URL)
         self.assertEqual(post.call_args_list[1].kwargs["headers"]["Authorization"], "test-bytez-key")
-        self.assertEqual(post.call_args_list[1].kwargs["json"]["model"], "Qwen/Qwen3-4B")
+        self.assertEqual(post.call_args_list[1].kwargs["json"]["messages"], [{"role": "user", "content": "test"}])
 
     def test_render_uses_llm7_after_openrouter_and_bytez_fail(self):
         live.OMNIROUTE_URL = "https://stale-temporary-tunnel.example/v1/chat/completions"
@@ -600,6 +696,36 @@ class RuntimeTests(unittest.TestCase):
         prompt = request_ai.call_args.args[0]["messages"][0]["content"]
         self.assertLess(len(prompt), live.MAX_FLASHCARD_SOURCE_CHARS + 500)
 
+    def test_flashcards_use_hosted_provider_when_pc_local_models_are_unavailable(self):
+        live.CLOUD_AI_FALLBACK = True
+        live.GOOGLE_AI_STUDIO_API_KEY = ""
+        live.OPENROUTER_API_KEY = "test-openrouter-key"
+        live.BYTEZ_API_KEY = ""
+        live.LLM7_API_KEY = ""
+        database = MagicMock()
+        cursor = database.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = {
+            "filename": "biology.txt",
+            "content": "Cells use membranes to regulate transport. Mitochondria produce cellular energy.",
+        }
+        upstream = type(
+            "Response",
+            (),
+            {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"choices": [{"message": {"content": '[{"q":"What do membranes regulate?","a":"Transport."}]'}}]},
+            },
+        )()
+        with patch.dict(os.environ, {"RENDER": "true"}), patch.object(live, "get_db", return_value=database), patch.object(
+            requests, "post", return_value=upstream
+        ) as post:
+            response = self.client.post("/api/flashcards", auth=self.auth, headers={"Origin": "http://localhost"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["flashcards"][0]["a"], "Transport.")
+        self.assertEqual(post.call_args.args[0], live.OPENROUTER_URL)
+        self.assertEqual(post.call_args.kwargs["json"]["model"], live.OPENROUTER_MODEL)
+
     def test_chat_sends_bounded_recent_history_to_ai(self):
         def fake_db(rows=None, new_id=None):
             db = MagicMock()
@@ -629,6 +755,39 @@ class RuntimeTests(unittest.TestCase):
         sent_history = payload["messages"][1:]
         self.assertEqual(sent_history[-1]["content"], "A" * live.MAX_CHAT_MESSAGE_CHARS)
         self.assertLessEqual(sum(len(item["content"]) for item in sent_history[:-1]), live.MAX_CHAT_HISTORY_CHARS)
+
+    def test_therapist_context_includes_only_bounded_screen_time_summary(self):
+        def make_db(fetchone_values=(), fetchall_values=()):
+            db = MagicMock()
+            cursor = db.__enter__.return_value.cursor.return_value.__enter__.return_value
+            cursor.fetchone.side_effect = list(fetchone_values)
+            cursor.fetchall.side_effect = list(fetchall_values)
+            return db
+
+        chat_write_db = make_db(fetchone_values=[{"id": 42}])
+        context_db = make_db(
+            fetchone_values=[{"hours": 7.5}, {"total": 20.0}],
+            fetchall_values=[
+                [{"role": "user", "content": "How am I doing?"}],
+                [],
+                [{"day": date(2026, 10, 23), "minutes": 145}, {"day": date(2026, 10, 22), "minutes": 90}],
+            ],
+        )
+        completion = {"choices": [{"message": {"content": "A grounded reflection."}}]}
+        with patch.object(live, "get_db", side_effect=[chat_write_db, context_db, make_db()]), patch.object(
+            live, "request_ai", return_value=completion
+        ) as request_ai:
+            response = self.client.post(
+                "/api/chat", auth=self.auth, headers={"Origin": "http://localhost"},
+                data={"message": "How am I doing?", "mode": "therapist"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        system_context = request_ai.call_args.args[0]["messages"][0]["content"]
+        self.assertIn("Manually logged iPhone Screen Time", system_context)
+        self.assertIn("235 minutes across 2 logged days", system_context)
+        self.assertIn("2026-10-23: 145 min", system_context)
+        self.assertIn("not automatically imported or clinically verified", system_context)
 
 
 if __name__ == "__main__":

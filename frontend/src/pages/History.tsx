@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { MessageSquare, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";

@@ -312,7 +312,7 @@ export default function Dashboard() {
             <input id="new-task" value={newTask} onChange={(event) => setNewTask(event.target.value)} placeholder="What do you want to achieve?" className="min-w-0 flex-1 rounded-xl border border-[#E9E6EF] bg-[#FAF9FC] px-4 py-3 text-sm text-[#242132] outline-none transition placeholder:text-[#9B97A7] focus:border-[#9A75E8] focus:ring-2 focus:ring-[#7C3AED]/15" />
             <label className="sr-only" htmlFor="new-objective-month">Objective month</label>
             <input id="new-objective-month" type="month" value={newTaskMonth} onChange={(event) => setNewTaskMonth(event.target.value)} required aria-label="Objective month" className="rounded-xl border border-[#E9E6EF] bg-[#FAF9FC] px-3 py-3 text-sm text-[#514B5E] outline-none focus:border-[#9A75E8] focus:ring-2 focus:ring-[#7C3AED]/15" />
-            <button type="submit" disabled={!newTask.trim() || !newTaskMonth || isAddingTask} aria-label="Add objective" className="grid h-11 w-full shrink-0 place-items-center rounded-xl bg-[#7C3AED] text-white transition hover:bg-[#6C2FD2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-11">
+            <button type="submit" disabled={!newTask.trim() || !newTaskMonth || isAddingTask} aria-label="Add objective" className="grid h-11 w-full shrink-0 place-items-center rounded-xl bg-[#7C3AED] text-white transition hover:bg-[#6D28D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-11">
               {isAddingTask ? <LoaderCircle size={18} className="animate-spin" /> : <Plus size={19} />}
             </button>
           </form>
@@ -445,7 +445,7 @@ export default function Dashboard() {
               <label className="sr-only" htmlFor="edit-task-category">Category</label><select id="edit-task-category" value={editCategory} onChange={(event) => setEditCategory(event.target.value)} className="w-full rounded-xl border border-[#E9E6EF] bg-white px-4 py-3 text-sm outline-none focus:border-[#9A75E8]"><option>Study</option><option>Project</option><option>Gym</option><option>Life</option></select>
               <label className="sr-only" htmlFor="edit-objective-month">Objective month</label><input id="edit-objective-month" type="month" value={editMonth} onChange={(event) => setEditMonth(event.target.value)} required className="w-full rounded-xl border border-[#E9E6EF] bg-white px-4 py-3 text-sm outline-none focus:border-[#9A75E8]" />
               <label className="sr-only" htmlFor="edit-task-context">Context</label><textarea id="edit-task-context" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} placeholder="Add context that will help you start" rows={3} className="w-full resize-none rounded-xl border border-[#E9E6EF] px-4 py-3 text-sm outline-none focus:border-[#9A75E8]" />
-              <button type="submit" disabled={!editText.trim() || !editMonth} className="w-full rounded-xl bg-[#7C3AED] py-3 text-sm font-semibold text-white hover:bg-[#6C2FD2] disabled:opacity-50">Save objective</button>
+              <button type="submit" disabled={!editText.trim() || !editMonth} className="w-full rounded-xl bg-[#7C3AED] py-3 text-sm font-semibold text-white hover:bg-[#6D28D9] disabled:opacity-50">Save objective</button>
             </div>
           </form>
         </div>

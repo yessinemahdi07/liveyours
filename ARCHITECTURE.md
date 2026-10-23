@@ -28,7 +28,7 @@ This is a single-user personal deployment. It does not provide per-person identi
 
 - Local requests try OmniRoute first. The request's `model` is one of `quick`, `study`, `projects`, or `therapist`; OmniRoute resolves those combo identifiers. If OmniRoute fails and `FREELLMAPI_API_KEY` is set, LiveYours forwards the request to the local FreeLLMAPI server using its `auto` route.
 - Requests on Render never attempt OmniRoute, FreeLLMAPI, or any URL on the developer's PC.
-- When cloud fallback is enabled, configured hosted providers are tried in order: OpenRouter, Bytez, then LLM7. Missing keys skip their provider.
+- When cloud fallback is enabled, configured hosted providers are tried in order: Google AI Studio, OpenRouter, Bytez, then LLM7. Missing keys skip their provider. Google AI Studio uses its OpenAI-compatible chat-completions endpoint; Bytez uses its model-specific endpoint and response adapter.
 - Each request has a bounded overall timeout. Provider logs record provider name, host, latency, HTTP status, and exception class; they must never include prompt text or credentials.
 - Normal task, sleep, activity, and expense logging does not invoke AI.
 

@@ -36,7 +36,7 @@ React + Vite static bundle ── same-origin JSON API ── Flask application
                                                     └── PostgreSQL (Supabase)
                                                          │
                                 local: OmniRoute ────────┤
-                                hosted: OpenRouter → Bytez → LLM7
+                                hosted: Gemini → OpenRouter → Bytez → LLM7
 ```
 
 The Render service serves both the API and compiled frontend. Its custom domain reaches Render directly, so sign-in, logging, and database-backed records do not depend on the development PC or OmniRoute. Render is configured for manual deploys. The current Render Free instance can sleep while idle and take time to wake; it is reachable without the PC, but it is not guaranteed to stay warm.
@@ -60,7 +60,15 @@ Browser authentication uses a signed, HTTP-only, SameSite=Lax session cookie; pr
 4. Build the UI with `npm run build`, then return to the repository root and start Flask with `python app.py`.
 5. Ensure PostgreSQL is available and Tesseract is installed if you want OCR locally.
 
-The production Docker image installs Tesseract and builds the frontend itself. Set `APP_USERNAME`, `APP_PASSWORD`, `SESSION_SECRET_KEY`, `DATABASE_URL`, and the cloud AI keys in the hosting provider's secret environment settings. Keep `CLOUD_AI_FALLBACK=true` on Render if hosted AI should work when the PC is offline. Non-AI logging works independently of all model providers.
+## AI coding agents
+
+The repository includes portable agent guidance in `AGENTS.md`, with short Claude Code and Gemini/Antigravity entry points in `CLAUDE.md` and `GEMINI.md`. Shared Agent Skills are under `.agents/skills/`; Claude Code receives a project-local mirror under `.claude/skills/`. These files provide workflows and reference material only. Each coding host still requires its own installed plugins, MCP servers, sign-in, and credentials.
+
+## iPhone Screen Time
+
+Log a daily Screen Time total manually in the mobile logger. To add a one-tap iPhone Shortcut that opens the preselected form, follow [the iOS Screen Time guide](docs/IOS_SCREEN_TIME.md). Automatic import requires a native iOS app and Apple Screen Time entitlements; the website and Shortcut cannot read that data directly.
+
+The production Docker image installs Tesseract and builds the frontend itself. Set `APP_USERNAME`, `APP_PASSWORD`, `SESSION_SECRET_KEY`, `DATABASE_URL`, and any cloud AI keys in the hosting provider's secret environment settings. Google AI Studio uses `GOOGLE_AI_STUDIO_API_KEY` (Gemini OpenAI-compatible endpoint; model configurable with `GOOGLE_AI_STUDIO_MODEL`). Keep `CLOUD_AI_FALLBACK=true` on Render if hosted AI and flashcard generation should work when the PC is offline. Non-AI logging works independently of all model providers.
 
 ## Verification
 

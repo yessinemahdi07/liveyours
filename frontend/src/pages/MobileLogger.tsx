@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
-import { Dumbbell, Footprints, BookOpen, Moon, Wallet, Trash2 } from "lucide-react";
+import { Dumbbell, Footprints, BookOpen, Moon, Wallet, Trash2, Smartphone } from "lucide-react";
 import { announceDeletedItem, REFRESH_EVENT } from "../lib/uiEvents";
 import type { ActivityLog, ActivityType } from "../lib/contracts";
 
 type LoggerTab = ActivityType | "Sleep" | "Finance";
 
 export default function MobileLogger() {
-  const [activeTab, setActiveTab] = useState<LoggerTab>("Gym");
+  const [activeTab, setActiveTab] = useState<LoggerTab>(() => new URLSearchParams(window.location.search).get("capture") === "screen-time" ? "Screen Time" : "Gym");
   const [hrs, setHrs] = useState(""); const [mins, setMins] = useState("");
   const [km, setKm] = useState(""); const [desc, setDesc] = useState("");
   const [sleepHrs, setSleepHrs] = useState(""); const [sleepQual, setSleepQual] = useState("5");
@@ -67,6 +67,7 @@ export default function MobileLogger() {
   const tabs: { id: LoggerTab; icon: React.ReactNode }[] = [
     { id: "Gym", icon: <Dumbbell size={18}/> }, { id: "Run", icon: <Footprints size={18}/> },
     { id: "Study", icon: <BookOpen size={18}/> }, { id: "Sleep", icon: <Moon size={18}/> }, { id: "Finance", icon: <Wallet size={18}/> },
+    { id: "Screen Time", icon: <Smartphone size={18}/> },
   ];
 
   return (
@@ -104,12 +105,14 @@ export default function MobileLogger() {
           </div>
         )}
 
-        {(activeTab === 'Gym' || activeTab === 'Study' || activeTab === 'Run') && (
+        {(activeTab === 'Gym' || activeTab === 'Study' || activeTab === 'Run' || activeTab === 'Screen Time') && (
           <div className="flex gap-3 mb-4">
             <input type="number" placeholder="Hours" value={hrs} onChange={e=>setHrs(e.target.value)} className="w-1/2 bg-gray-50 border p-4 rounded-2xl text-lg font-bold text-center outline-none focus:border-[#7C3AED]" />
             <input type="number" placeholder="Mins" value={mins} onChange={e=>setMins(e.target.value)} className="w-1/2 bg-gray-50 border p-4 rounded-2xl text-lg font-bold text-center outline-none focus:border-[#7C3AED]" />
           </div>
         )}
+
+        {activeTab === "Screen Time" && <p className="-mt-2 mb-4 text-xs leading-5 text-gray-500">Enter today’s total from iPhone Settings → Screen Time. iOS does not let a website or Shortcut read this total automatically.</p>}
 
         <textarea placeholder="Notes (optional)..." value={desc} onChange={e=>setDesc(e.target.value)} rows={2} className="w-full bg-gray-50 border p-4 rounded-2xl mb-4 outline-none focus:border-[#7C3AED] resize-none" />
 

@@ -1,4 +1,4 @@
-﻿import { Home, MessageSquare, Library, Activity, BarChart2, Clock, CheckCircle, LogOut } from "lucide-react";
+import { Home, MessageSquare, Library, Activity, BarChart2, Clock, CheckCircle, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import GlobalActions from "./GlobalActions";
@@ -7,12 +7,7 @@ import { Command } from "lucide-react";
 import { Plus } from "lucide-react";
 import { MoreHorizontal } from "lucide-react";
 
-const Logo = () => (
-  <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#7C3AED]">
-    <path d="M20 20 L40 80 L50 50 L60 80 L80 20" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M35 20 L50 50 L65 20" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+const Logo = () => <img src="/favicon.svg" alt="" aria-hidden="true" className="h-9 w-9 rounded-xl" />;
 
 export default function Layout({ children, onSignOut }: { children: React.ReactNode; onSignOut: () => void | Promise<void> }) {
   const location = useLocation();
@@ -28,7 +23,7 @@ export default function Layout({ children, onSignOut }: { children: React.ReactN
   ];
 
   return (
-    <div className="flex h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-[#F2F2F7] text-[#1D1D1F]">
+    <div className="flex h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-white text-[#1D1D1F]">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 z-20">
         <div className="p-6 flex items-center gap-3">

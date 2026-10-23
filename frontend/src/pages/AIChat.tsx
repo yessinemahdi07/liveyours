@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip } from "lucide-react";
 import { ApiError, api } from "../lib/api";
 import ReactMarkdown from "react-markdown";
@@ -95,10 +95,10 @@ export default function AIChat() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] min-h-0 min-w-0 flex-col overflow-hidden bg-white md:m-6 md:h-full md:rounded-3xl md:border md:shadow-sm">
+    <div className="mobile-chat-height flex min-h-0 min-w-0 flex-col overflow-hidden bg-white md:m-6 md:h-full md:rounded-3xl md:border md:shadow-sm">
       {/* Mode Switcher */}
       <div className="bg-white border-b border-gray-100 p-2 sticky top-0 z-10">
-        {privacySettings && <p role="status" className={`mb-2 rounded-xl px-3 py-2 text-[11px] leading-4 ${privacySettings.cloud_ai_fallback ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+        {privacySettings && <p role="status" className={`mb-2 rounded-xl px-3 py-2 text-[11px] leading-4 ${privacySettings.cloud_ai_fallback ? "bg-amber-50 text-amber-800" : "bg-violet-50 text-emerald-800"}`}>
           {privacySettings.cloud_ai_fallback ? "Cloud fallback enabled: messages and therapist context may be sent to external AI providers when local AI is unavailable." : "Local-only AI: messages and personal context stay with your configured local model."}
         </p>}
         <div className="flex bg-[#F2F2F7] p-1 rounded-2xl gap-0.5">
@@ -146,7 +146,7 @@ export default function AIChat() {
         <div className="flex items-center gap-2">
           <input type="file" accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls,application/pdf,image/png,image/jpeg,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple id="chat-file" onChange={handleFilesSelected} className="sr-only" />
           <label aria-label="Attach up to five PDF, image, CSV, or Excel files" htmlFor="chat-file" className="flex min-h-11 min-w-11 items-center justify-center text-gray-600 bg-[#F2F2F7] rounded-full cursor-pointer tap"><Paperclip size={20} /></label>
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} placeholder="Message…" className="min-w-0 flex-1 bg-[#F2F2F7] rounded-full px-4 md:px-5 py-3 outline-none" />
+          <input type="text" enterKeyHint="send" autoComplete="off" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} placeholder="Message…" className="min-w-0 flex-1 bg-[#F2F2F7] rounded-full px-4 md:px-5 py-3 outline-none" />
           <button aria-label="Send message" onClick={handleSend} disabled={isLoading} className="flex min-h-11 min-w-11 items-center justify-center bg-[#7C3AED] text-white rounded-full disabled:opacity-50 tap"><Send size={18} /></button>
         </div>
       </div>

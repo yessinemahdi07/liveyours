@@ -16,8 +16,12 @@ Set these environment values in the Render service:
 | Variable | Required value |
 | --- | --- |
 | `DATABASE_URL` | Supabase PostgreSQL connection string; use the transaction pooler URL if required by the project |
+| `GOOGLE_AI_STUDIO_API_KEY` | Optional Google AI Studio key for Gemini hosted fallback |
+| `GOOGLE_AI_STUDIO_MODEL` | Optional Gemini model; defaults to `models/gemini-3.1-flash-lite` (verified against the connected account's model catalog and synthetic completion) |
 | `OPENROUTER_API_KEY` | OpenRouter key for AI when the local PC is unavailable |
 | `BYTEZ_API_KEY` | Optional Bytez fallback key for AI when the local PC is unavailable |
+| `BYTEZ_MODEL` | Optional Bytez chat model ID; defaults to `Qwen/Qwen3-4B` |
+| `HOME_CITY` | Optional private trip-planning origin; leave unset to require a selected supported origin |
 | `LLM7_API_KEY` | Optional LLM7 fallback key; model defaults to the configured LLM7 `gpt-4o-mini-2024-07-18` endpoint |
 | `FREELLMAPI_URL` | Local FreeLLMAPI chat endpoint; defaults to `http://127.0.0.1:3001/v1/chat/completions` |
 | `FREELLMAPI_API_KEY` | Optional local FreeLLMAPI unified API key; do not set this on Render |
@@ -28,7 +32,7 @@ Set these environment values in the Render service:
 
 Keep `CLOUD_AI_FALLBACK=false` in local `.env` unless direct cloud processing is intentionally wanted there. Set `OMNIROUTE_API_KEY` to an active OmniRoute API key locally; the app does not expose OmniRoute credentials. To use FreeLLMAPI, start its local server, copy its unified API key from the dashboard, and set `FREELLMAPI_API_KEY` in LiveYours' local `.env`. API keys, session secrets, passwords, and database URLs belong only in environment variables, never in Git.
 
-AI calls use one overall time budget and move to the next configured provider quickly. The hosted fallback order is OpenRouter, Bytez, then LLM7. Without `LLM7_API_KEY`, that provider is skipped. The trip planner returns a fuel-calculated, budget-first outline if all AI providers are slow or unavailable.
+AI calls use one overall time budget and move to the next configured provider quickly. The hosted fallback order is Google AI Studio, OpenRouter, Bytez, then LLM7. Unconfigured providers are skipped. The trip planner returns a fuel-calculated, budget-first outline if all AI providers are slow or unavailable.
 
 After deployment, check `https://<render-service>.onrender.com/healthz` returns `200`. The app shell serves a sign-in screen; verify unauthenticated `/api/*` requests return `401`, then sign in and test task, sleep, activity, and expense logging while the PC and OmniRoute are off. Use synthetic test entries and remove them through the app's normal recovery flow after verification.
 

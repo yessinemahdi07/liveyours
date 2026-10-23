@@ -1,5 +1,5 @@
 export type TaskCategory = "Study" | "Project" | "Gym" | "Life" | "General";
-export type ActivityType = "Gym" | "Run" | "Study";
+export type ActivityType = "Gym" | "Run" | "Study" | "Screen Time";
 export type TransactionType = "expense" | "income";
 export type ChatMode = "quick" | "study" | "projects" | "therapist";
 

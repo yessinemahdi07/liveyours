@@ -202,7 +202,7 @@ export default function GlobalActions() {
         </div>}
         {captureKind !== "expense" && <><label htmlFor="capture-description" className="mb-1.5 block text-xs font-semibold text-[#625D70]">A note, if useful</label><textarea id="capture-description" rows={2} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Add a little context" className="mb-3 w-full resize-none rounded-xl border border-[#E9E6EF] px-4 py-3 text-sm outline-none focus:border-[#9A75E8]" /></>}
         {error && <p role="alert" className="mb-3 rounded-xl bg-[#FFF4F2] px-3 py-2 text-sm text-[#8B3535]">{error}</p>}
-        <button type="submit" disabled={saving} className="min-h-12 w-full rounded-xl bg-[#7C3AED] text-sm font-semibold text-white transition hover:bg-[#6C2FD2] disabled:opacity-60">{saving ? "Saving…" : "Save capture"}</button>
+        <button type="submit" disabled={saving} className="min-h-12 w-full rounded-xl bg-[#7C3AED] text-sm font-semibold text-white transition hover:bg-[#6D28D9] disabled:opacity-60">{saving ? "Saving…" : "Save capture"}</button>
       </form>
     </div>}
 

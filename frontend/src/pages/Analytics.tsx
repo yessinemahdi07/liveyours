@@ -60,7 +60,7 @@ export default function Analytics() {
     : "Building your baseline";
 
   return (
-    <div className="min-h-full bg-[#F6F4FA] px-4 pb-8 pt-5 text-[#211B2B] sm:px-6 md:px-10 md:pt-9">
+    <div className="min-h-full bg-white px-4 pb-8 pt-5 text-[#211B2B] sm:px-6 md:px-10 md:pt-9">
       <div className="mx-auto max-w-6xl space-y-5 md:space-y-7">
         <header className="flex items-start justify-between gap-3">
           <div>
