@@ -6,6 +6,10 @@ LiveYours brings study, tasks, health routines, spending, and reflection into on
 
 > **Project stage:** personal prototype. The current deployment is single-user and is not designed for public multi-tenant use.
 
+## Portfolio
+
+Copy-ready [LinkedIn project description and five illustrative media screenshots](docs/portfolio/LINKEDIN_PROJECT_DESCRIPTION.md). The screenshots use synthetic demo data and do not establish production provider health.
+
 ## What it does
 
 - Capture and organize study and personal priorities, with completion history and undo.

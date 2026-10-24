@@ -1,0 +1,18 @@
+LIVEYOURS SCREENSHOT PACK — LATEST AVAILABLE PORTFOLIO CAPTURE, 23 OCTOBER 2026
+
+The six sanitized LinkedIn-ready captures are in `docs/portfolio/screenshots/`:
+
+01-dashboard.png — Monthly objectives, daily check-in, task controls, wellbeing context, and budget overview.
+02-quick-capture.png — Quick entry for a priority, activity, or expense.
+03-analytics.png — Tracked-time chart, activity mix, and spending snapshot.
+04-study-library.png — Document library and active-recall card.
+05-trip-planner.png — Budget-first itinerary with distance and fuel estimate.
+06-iphone-13-home.png — Responsive home at 390 x 844 CSS pixels.
+
+Capture provenance: the screenshots were produced from the running LiveYours interface with every `/api/*` call intercepted and served illustrative sample data. No LiveYours account record was created, read, or changed for the captures. The first five use desktop viewports; the sixth uses an iPhone 13-sized viewport. The greeting in the LinkedIn copies is generic; all visible records and metrics are synthetic.
+
+These are the most recently saved portfolio captures in this folder as of 23 October 2026. The 24 October release updated hosted AI routing, not the UI represented in these captures. They document that synthetic-data capture pass; they do not prove current production screens, provider health, or live user data. Keep the "Illustrative demo data" label visible.
+
+Recommended LinkedIn carousel: screenshots 01 through 05, followed by 06 as the mobile slide.
+
+The public LinkedIn screenshot copies have the owner name removed. The recommended LinkedIn project media set is the five desktop feature screens; the iPhone-sized view is an optional alternate.
