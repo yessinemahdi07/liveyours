@@ -1,14 +1,14 @@
 # LiveYours — LinkedIn project entry
 
-**Description (1417 characters; LinkedIn limit: 2,000)**
+**Description (1422 characters; LinkedIn limit: 2,000)**
 
-LiveYours is a mobile-first personal workspace I designed and built to bring priorities, study, wellbeing routines, budgeting, and reflection into one place. It combines monthly objectives and tasks, quick capture for priorities and expenses, activity and sleep logs, study and spending analytics, a document library with bounded extraction and active-recall flashcards, persistent AI conversations, and budget-first trip planning.
+LiveYours is my all-in-one personal operating system in the making: one phone-first home for the parts of life that are too connected to manage in separate apps—ambition, learning, wellbeing, money, and headspace. The vision is bold: make the app people reach for to plan clearly, learn faster, reflect honestly, and follow through.
 
-I built the client with React, TypeScript, Vite, and Tailwind CSS, and the API with Python, Flask, and PostgreSQL. The responsive interface includes iPhone 13-sized layouts. Core records and deterministic calculations remain useful independently of AI availability; optional AI features use bounded context and depend on separately configured providers and their finite quotas.
+I’m a cybersecurity engineering student building LiveYours end to end, from product direction and interaction design to the React/TypeScript client, Flask API, PostgreSQL data layer, and cloud deployment. I didn’t stop at a concept or a dashboard: the live app brings monthly goals, quick capture, study and activity analytics, document-based flashcards, trip planning, and a persistent AI chatbot into one coherent experience.
 
-The app is deployed as an authenticated, single-user web service, so its hosted records do not depend on my development PC being on. The current Render Free instance may sleep while idle. Hosted AI availability and a fresh production completion have not been verified in this release, so I do not claim uninterrupted AI or unlimited capacity.
+The chatbot is designed as a practical companion across study, projects, planning, and reflection. Therapist mode can adapt its responses using bounded, self-reported context such as sleep, activity, or manually logged Screen Time. It is reflective support—not clinical care. Core records and calculations remain useful without AI; AI assistance is optional and depends on external providers.
 
-LiveYours is an evolving personal engineering project, not a multi-user SaaS product. Building it has helped me practice product design, secure full-stack engineering, responsive workflows, document processing, and graceful behavior when upstream services fail.
+LiveYours is live today as a private, authenticated single-user product. I’m building toward a bigger idea: an all-in-one personal OS that helps people make progress across the whole of life, with privacy, trust, and reliability built into the product from day one.
 
 ## Suggested project details
 
